@@ -16,4 +16,15 @@ git clone https://github.com/ekomsSavior/honeyFILE.git
 cd honeyFILE
 ```
 
+initaite honeyFILE:
 
+```bash
+python3 honeyfile.py init random                                                                                                 
+sudo python3 honeyfile.py arm
+sudo auditctl -l | grep honeyfile
+```
+If you want, paste the output of:
+
+```bash
+python3 honeyfile.py status
+```
