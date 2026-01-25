@@ -48,7 +48,10 @@ sudo apt install -y auditd audispd-plugins
 sudo systemctl enable auditd
 sudo systemctl start auditd
 ```
-
+```bash
+pip install psutil --break-system-packages
+```
+-if you dont want to run break system packages do this up in a venv and do it from there xo
 ---
 
 ## Install
