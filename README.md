@@ -304,10 +304,6 @@ sudo python3 honeyfile.py rotate
 * [`network_ids`](https://github.com/ekomsSavior/network_ids)
   Network-level detection and response (great companion tool)
 
-* `osquery` – System instrumentation
-* `auditbeat` – Auditd metrics for Elastic
-* `canarytokens` – Web-based honey tokens
-
 ---
 
 ##  Author
