@@ -445,4 +445,4 @@ honeyFILE is designed for **defensive security only**:
 
 ** Remember**: honeyFILE provides **detection and attribution**, not prevention. Use as part of a layered defense strategy with firewalls, IDS/IPS, and proper access controls.
 
-**When someone touches your honeyfiles, you'll know exactly who they are and where they came from.** 🌐🕵️‍♂️
+**When someone touches your honeyfiles, you'll know exactly who they are and where they came from.** 
