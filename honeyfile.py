@@ -638,7 +638,7 @@ def report(minutes: int):
     print(json.dumps(summary, indent=2))
 
 # ============================
-# NEW IP TRACKING COMMANDS
+#  IP TRACKING COMMANDS
 # ============================
 
 def show_ip_tracking():
@@ -739,7 +739,7 @@ def export_ip_intelligence():
     print("[i] Share with: SOC, Threat Intel Platforms, AbuseIPDB")
 
 # ============================
-# REST OF ORIGINAL FUNCTIONS (with minimal changes)
+# ORIGINAL FUNCTIONS
 # ============================
 
 def pick_random_decoy_dir() -> Path:
