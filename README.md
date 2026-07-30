@@ -6,9 +6,6 @@
 
 **They steal `passwords.txt` from your desktop. You steal their entire network.**
 
-
-<img width="1254" height="1254" alt="git" src="https://github.com/user-attachments/assets/27aa0ebc-b405-4c65-9efb-e56888ab0df9" />
-
 ---
 
 ## What This Is
@@ -238,4 +235,6 @@ chmod +x ~/Documents/server-credentials.txt
  ---
  
  ## DISCLAIMER: for auth sec testing or edu training only
+
+ <img width="1254" height="1254" alt="git" src="https://github.com/user-attachments/assets/27aa0ebc-b405-4c65-9efb-e56888ab0df9" />
  
