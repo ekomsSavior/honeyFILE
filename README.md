@@ -1,6 +1,6 @@
 # honeyFILE
 
-** brought to you by the fine people of: Church Of Malware xo **
+**brought to you by the fine people of: Church Of Malware xo**
 
 ### You don't secure your computer. You booby trap it.
 
